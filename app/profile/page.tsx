@@ -97,7 +97,7 @@ export default async function ProfilePage() {
     {
       icon: <Info size={16} className="text-primary" />,
       label: 'Tentang Aplikasi',
-      href: '#',
+      href: '/about',
     },
   ];
 

@@ -19,7 +19,10 @@ export default function BottomNav() {
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-100 bottom-nav z-40">
       <div className="grid grid-cols-4 h-16">
         {navItems.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
+          const isActive =
+            pathname === href ||
+            (href !== '/' && pathname.startsWith(href)) ||
+            (href === '/profile' && pathname.startsWith('/about'));
           return (
             <Link
               key={href}
