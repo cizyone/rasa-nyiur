@@ -44,9 +44,12 @@ export async function updateSession(request: NextRequest) {
   const isLoggedIn = !!session;
   const pathname = request.nextUrl.pathname;
 
-  // Rute yang WAJIB login (hanya checkout dan profile)
+  // Rute yang WAJIB login (hanya checkout).
+  // Profile tidak dipaksa redirect: halaman profil membaca sesi sendiri di server
+  // dan menampilkan ajakan masuk jika memang belum login. Ini mencegah user yang
+  // sudah login tetap dilempar ke /login saat pengecekan sesi di middleware meleset.
   // Cart & orders bisa diakses publik (data dari local state)
-  const protectedPaths = ['/checkout', '/profile'];
+  const protectedPaths = ['/checkout'];
 
   // Rute yang redirect ke home kalau sudah login
   const authOnlyPaths = ['/login', '/register'];

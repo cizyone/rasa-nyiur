@@ -1,6 +1,3 @@
-'use client';
-
-import React from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -11,9 +8,13 @@ import {
   HelpCircle,
   Info,
   ChevronRight,
-  LogOut,
 } from 'lucide-react';
 import BottomNav from '@/components/layout/BottomNav';
+import LogoutButton from '@/components/ui/LogoutButton';
+import { createClient } from '@/lib/supabase/server';
+
+// Selalu render dinamis karena bergantung pada cookie sesi pengguna.
+export const dynamic = 'force-dynamic';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -26,16 +27,50 @@ interface MenuItemDef {
   danger?: boolean;
 }
 
+function getInitials(name: string, email: string): string {
+  const source = name.trim() || email;
+  if (!source) return 'RN';
+
+  const parts = source
+    .replace(/@.*$/, '')
+    .split(/[\s._-]+/)
+    .filter(Boolean);
+
+  if (parts.length === 0) return 'RN';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function ProfilePage() {
-  // In a real app these would come from an auth store / context.
-  // We default to logged-out state as specified.
-  const isLoggedIn = false;
-  const userName = 'Pengguna Rasa Nyiur';
-  const userEmail: string | null = null; // null = not logged in
+export default async function ProfilePage() {
+  // Baca sesi langsung dari server agar status login selalu akurat.
+  let isLoggedIn = false;
+  let userName = 'Pengguna Rasa Nyiur';
+  let userEmail: string | null = null;
+
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      isLoggedIn = true;
+      const fullName =
+        (user.user_metadata?.full_name as string | undefined) ??
+        (user.user_metadata?.name as string | undefined) ??
+        '';
+      userEmail = user.email ?? null;
+      userName = fullName.trim() || userEmail?.split('@')[0] || 'Pengguna Rasa Nyiur';
+    }
+  } catch {
+    // Supabase belum dikonfigurasi / gagal terhubung — tampilkan mode tamu.
+  }
+
+  const initials = getInitials(userName, userEmail ?? '');
 
   const menuItems: MenuItemDef[] = [
     {
@@ -88,24 +123,28 @@ export default function ProfilePage() {
           {/* Avatar circle */}
           <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-3">
             {isLoggedIn ? (
-              <span className="text-primary font-bold text-lg select-none">RN</span>
+              <span className="text-primary font-bold text-lg select-none">{initials}</span>
             ) : (
               <User size={28} className="text-primary" />
             )}
           </div>
 
           {/* Name */}
-          <p className="font-bold text-gray-800 text-sm">{userName}</p>
+          <p className="font-bold text-gray-800 text-sm">
+            {isLoggedIn ? userName : 'Tamu'}
+          </p>
 
           {/* Email */}
           <p className="text-xs text-gray-400 mt-0.5">
-            {userEmail ?? 'masuk untuk melihat akun'}
+            {isLoggedIn ? userEmail : 'masuk untuk melihat akun'}
           </p>
 
           {/* Edit button */}
-          <button className="mt-3 px-4 py-1.5 border border-primary text-primary text-xs font-semibold rounded-xl hover:bg-primary/5 transition-colors">
-            Edit Profil
-          </button>
+          {isLoggedIn && (
+            <button className="mt-3 px-4 py-1.5 border border-primary text-primary text-xs font-semibold rounded-xl hover:bg-primary/5 transition-colors">
+              Edit Profil
+            </button>
+          )}
         </section>
 
         {/* 2. NOT LOGGED IN CARD */}
@@ -116,7 +155,7 @@ export default function ProfilePage() {
             </p>
             <div className="flex gap-3">
               <Link
-                href="/login"
+                href="/login?next=/profile"
                 className="flex-1 text-center py-2.5 bg-primary text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity"
               >
                 Masuk
@@ -159,17 +198,7 @@ export default function ProfilePage() {
           ))}
 
           {/* Logout row — shown only when logged in */}
-          {isLoggedIn && (
-            <button className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-red-50 transition-colors">
-              <span className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                <LogOut size={16} className="text-red-500" />
-              </span>
-              <span className="flex-1 text-left text-sm font-medium text-red-500">
-                Keluar
-              </span>
-              <ChevronRight size={16} className="text-gray-300 shrink-0" />
-            </button>
-          )}
+          {isLoggedIn && <LogoutButton />}
         </section>
 
         {/* 4. VERSION FOOTER */}
