@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -18,6 +18,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useCartStore } from '@/lib/store';
+import { useAddressStore } from '@/lib/address-store';
 import { formatRupiah, generateOrderNumber } from '@/lib/utils';
 
 type DeliveryMethod = 'delivery' | 'pickup';
@@ -32,11 +33,18 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('qris');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('Tikala, Manado - Jl. Sam Ratulangi No. 42');
+  const savedAddress = useAddressStore((s) => s.address);
+  const setSavedAddress = useAddressStore((s) => s.setAddress);
+  const [address, setAddress] = useState(savedAddress);
   const [landmark, setLandmark] = useState('');
   const [courierNotes, setCourierNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Ambil alamat tersimpan setelah store selesai hidrasi dari localStorage.
+  useEffect(() => {
+    setAddress(savedAddress);
+  }, [savedAddress]);
 
   const subtotal = getSubtotal();
   const deliveryFee = getDeliveryFee();
@@ -50,9 +58,18 @@ export default function CheckoutPage() {
       setError('Nama dan nomor WhatsApp wajib diisi.');
       return;
     }
+    if (deliveryMethod === 'delivery' && !address.trim()) {
+      setError('Alamat pengantaran wajib diisi.');
+      return;
+    }
 
     setLoading(true);
     setError('');
+
+    // Simpan alamat agar otomatis terpakai pada pesanan berikutnya.
+    if (deliveryMethod === 'delivery') {
+      setSavedAddress(address);
+    }
 
     const orderNumber = generateOrderNumber();
 
@@ -261,6 +278,7 @@ export default function CheckoutPage() {
                     onChange={(e) => setAddress(e.target.value)}
                     rows={2}
                     className="input-field pl-10 resize-none"
+                    required
                   />
                 </div>
                 <div className="relative">

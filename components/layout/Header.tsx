@@ -1,7 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { Bell, ChevronDown, User } from 'lucide-react';
 import Link from 'next/link';
+import AddressModal from '@/components/ui/AddressModal';
+import { useAddressStore } from '@/lib/address-store';
 
 interface HeaderProps {
   location?: string;
@@ -10,16 +13,25 @@ interface HeaderProps {
 }
 
 export default function Header({
-  location = 'Tikala, Manado - Jl. Sam Ratulangi No. 42',
+  location,
   showNotification = true,
   showProfile = true,
 }: HeaderProps) {
+  const savedAddress = useAddressStore((s) => s.address);
+  const displayLocation = location ?? savedAddress;
+  const [isAddressOpen, setAddressOpen] = useState(false);
+
   return (
     <header className="bg-white px-4 pt-4 pb-3 flex items-center justify-between gap-3">
       <div className="flex-1 min-w-0">
         <p className="text-[11px] font-medium text-neutral-500 uppercase tracking-wider">📍 Antar ke</p>
-        <button className="flex items-center gap-1 group mt-0.5">
-          <span className="text-sm font-bold text-gray-900 truncate max-w-[200px]">{location}</span>
+        <button
+          type="button"
+          onClick={() => setAddressOpen(true)}
+          className="flex items-center gap-1 group mt-0.5"
+          aria-label="Ubah alamat pengantaran"
+        >
+          <span className="text-sm font-bold text-gray-900 truncate max-w-[200px]">{displayLocation}</span>
           <ChevronDown size={14} className="text-primary flex-shrink-0 group-hover:translate-y-0.5 transition-transform" />
         </button>
       </div>
@@ -39,6 +51,8 @@ export default function Header({
           </Link>
         )}
       </div>
+
+      <AddressModal open={isAddressOpen} onClose={() => setAddressOpen(false)} />
     </header>
   );
 }

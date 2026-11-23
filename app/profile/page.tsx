@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import BottomNav from '@/components/layout/BottomNav';
 import LogoutButton from '@/components/ui/LogoutButton';
+import AddressMenuButton from '@/components/ui/AddressMenuButton';
 import { createClient } from '@/lib/supabase/server';
 
 // Selalu render dinamis karena bergantung pada cookie sesi pengguna.
@@ -172,30 +173,34 @@ export default async function ProfilePage() {
 
         {/* 3. MENU LIST */}
         <section className="bg-white rounded-2xl overflow-hidden divide-y divide-gray-50">
-          {menuItems.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors"
-            >
-              {/* Icon bubble */}
-              <span className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                {item.icon}
-              </span>
-
-              {/* Label */}
-              <span
-                className={`flex-1 text-sm font-medium ${
-                  item.danger ? 'text-red-500' : 'text-gray-700'
-                }`}
+          {menuItems.map((item) =>
+            item.label === 'Alamat Tersimpan' ? (
+              <AddressMenuButton key={item.label} />
+            ) : (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors"
               >
-                {item.label}
-              </span>
+                {/* Icon bubble */}
+                <span className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  {item.icon}
+                </span>
 
-              {/* Chevron */}
-              <ChevronRight size={16} className="text-gray-300 shrink-0" />
-            </Link>
-          ))}
+                {/* Label */}
+                <span
+                  className={`flex-1 text-sm font-medium ${
+                    item.danger ? 'text-red-500' : 'text-gray-700'
+                  }`}
+                >
+                  {item.label}
+                </span>
+
+                {/* Chevron */}
+                <ChevronRight size={16} className="text-gray-300 shrink-0" />
+              </Link>
+            )
+          )}
 
           {/* Logout row — shown only when logged in */}
           {isLoggedIn && <LogoutButton />}

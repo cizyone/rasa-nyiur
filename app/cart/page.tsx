@@ -14,9 +14,11 @@ import {
   Pencil,
 } from 'lucide-react';
 import { useCartStore } from '@/lib/store';
+import { useAddressStore } from '@/lib/address-store';
 import { formatRupiah, PROMO_CODES } from '@/lib/utils';
 import ImageWithFallback from '@/components/ui/ImageWithFallback';
 import QuantitySelector from '@/components/ui/QuantitySelector';
+import AddressModal from '@/components/ui/AddressModal';
 
 // ---------------------------------------------------------------------------
 // Component
@@ -43,6 +45,9 @@ export default function CartPage() {
 
   const [promoInput, setPromoInput] = useState('');
   const [promoError, setPromoError] = useState('');
+  const [isAddressOpen, setAddressOpen] = useState(false);
+
+  const savedAddress = useAddressStore((s) => s.address);
 
   const subtotal = getSubtotal();
   const deliveryFee = getDeliveryFee();
@@ -104,10 +109,14 @@ export default function CartPage() {
           <div className="flex items-start gap-3">
             <MapPin size={18} className="text-primary mt-0.5 shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-800 leading-snug">Tikala, Manado</p>
-              <p className="text-xs text-gray-500 mt-0.5">Jl. Sam Ratulangi No. 42</p>
+              <p className="text-sm font-semibold text-gray-800 leading-snug whitespace-pre-line">
+                {savedAddress}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">Alamat pengantaran</p>
             </div>
             <button
+              type="button"
+              onClick={() => setAddressOpen(true)}
               className="p-1.5 rounded-full hover:bg-gray-100 transition-colors shrink-0"
               aria-label="Edit alamat"
             >
@@ -327,6 +336,8 @@ export default function CartPage() {
             : 'Keranjang Kosong'}
         </Link>
       </div>
+
+      <AddressModal open={isAddressOpen} onClose={() => setAddressOpen(false)} />
     </div>
   );
 }
