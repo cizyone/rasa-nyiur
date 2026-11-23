@@ -29,7 +29,9 @@ export default function LoginPage() {
         message.includes('Invalid login credentials')
           ? 'Email atau password salah. Coba lagi.'
           : message.includes('Email not confirmed')
-          ? 'Email belum diverifikasi. Cek inbox kamu.'
+          ? 'Email belum dikonfirmasi. Hubungi admin atau daftar ulang.'
+          : message.includes('User not found')
+          ? 'Akun tidak ditemukan. Silakan daftar terlebih dahulu.'
           : !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'your_supabase_project_url'
           ? 'Supabase belum dikonfigurasi. Isi .env.local terlebih dahulu.'
           : message

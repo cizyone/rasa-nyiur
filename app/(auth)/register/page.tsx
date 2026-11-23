@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { User, Mail, Lock, Eye, EyeOff, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { User, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,7 +16,6 @@ export default function RegisterPage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,25 +38,49 @@ export default function RegisterPage() {
     try {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
-      const { error: authError } = await supabase.auth.signUp({
+
+      // Sign up — email confirmation disabled di Supabase, jadi langsung aktif
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: { full_name: name },
-        },
+        options: { data: { full_name: name } },
       });
-      if (authError) throw authError;
-      setSuccess(true);
+
+      if (signUpError) throw signUpError;
+
+      // Jika sudah ada session (email confirm dimatikan), langsung masuk
+      if (data.session) {
+        router.push('/');
+        router.refresh();
+        return;
+      }
+
+      // Fallback: coba langsung login setelah register
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        // Mungkin masih butuh konfirmasi — arahkan ke login
+        router.push('/login?registered=1');
+      } else {
+        router.push('/');
+        router.refresh();
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Pendaftaran gagal';
       setError(
-        message.includes('User already registered')
-          ? 'Email ini sudah terdaftar. Coba masuk atau gunakan email lain.'
+        message.includes('User already registered') || message.includes('already been registered')
+          ? 'Email ini sudah terdaftar. Silakan masuk.'
           : message.includes('Password should be at least')
           ? 'Password minimal 6 karakter.'
-          : message.includes('invalid email')
+          : message.includes('invalid email') || message.includes('Invalid email')
           ? 'Format email tidak valid.'
-          : !process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL === 'your_supabase_project_url'
+          : message.includes('signup_disabled')
+          ? 'Pendaftaran sementara dinonaktifkan.'
+          : !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+            process.env.NEXT_PUBLIC_SUPABASE_URL === 'your_supabase_project_url'
           ? 'Supabase belum dikonfigurasi. Isi .env.local terlebih dahulu.'
           : message
       );
@@ -63,48 +88,6 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
-
-  if (success) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#EBF3EE] via-[#F5F6F5] to-[#FEF8EC] flex flex-col">
-        <div className="p-4">
-          <Link href="/" className="inline-flex items-center gap-2 text-primary font-semibold text-sm hover:opacity-80 transition-opacity">
-            <ArrowLeft size={18} />
-            Kembali
-          </Link>
-        </div>
-
-        <div className="flex-1 flex flex-col items-center justify-center px-4 pb-8">
-          <div className="text-center mb-8">
-            <div className="text-5xl mb-3">🌴</div>
-            <h1 className="text-2xl font-extrabold text-[#24583F]">Rasa Nyiur</h1>
-            <p className="text-sm text-neutral-500 font-medium">Kuliner Khas Manado</p>
-          </div>
-
-          <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl p-8 flex flex-col items-center text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle2 size={36} className="text-[#24583F]" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Pendaftaran Berhasil! 🎉</h2>
-            <p className="text-sm text-neutral-500 mb-6">
-              Cek email kamu untuk verifikasi akun!
-              <br />
-              <span className="font-semibold text-[#24583F]">{email}</span>
-            </p>
-            <p className="text-xs text-neutral-400 mb-6">
-              Tidak menemukan email? Cek folder spam atau tunggu beberapa menit.
-            </p>
-            <Link
-              href="/login"
-              className="w-full bg-[#24583F] text-white font-bold py-3.5 rounded-xl text-sm text-center transition-all duration-150 hover:bg-[#1E4A35] active:scale-95 block"
-            >
-              Masuk Sekarang
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#EBF3EE] via-[#F5F6F5] to-[#FEF8EC] flex flex-col">
@@ -155,7 +138,7 @@ export default function RegisterPage() {
               <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
               <input
                 type="email"
-                placeholder="Email kamu"
+                placeholder="Email kamu (bisa email apapun)"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -236,7 +219,7 @@ export default function RegisterPage() {
               <span className="text-xs text-neutral-500 leading-relaxed">
                 Saya menyetujui{' '}
                 <button type="button" className="text-[#24583F] font-semibold hover:underline">
-                  Syarat & Ketentuan
+                  Syarat &amp; Ketentuan
                 </button>{' '}
                 dan{' '}
                 <button type="button" className="text-[#24583F] font-semibold hover:underline">
@@ -257,7 +240,7 @@ export default function RegisterPage() {
                   Mendaftar...
                 </>
               ) : (
-                'Daftar Sekarang'
+                'Daftar Sekarang →'
               )}
             </button>
           </form>
