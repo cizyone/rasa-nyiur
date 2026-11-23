@@ -9,9 +9,10 @@ interface BadgeProps {
 const variantStyles = {
   primary: 'bg-primary/10 text-primary',
   secondary: 'bg-secondary/10 text-secondary-700',
-  tertiary: 'bg-tertiary/20 text-amber-700',
+  // Solid amber + teks gelap agar kontras dan terbaca jelas di atas foto menu.
+  tertiary: 'bg-tertiary text-tertiary-900 shadow-sm ring-1 ring-tertiary-600/30',
   danger: 'bg-red-50 text-red-600',
-  dark: 'bg-primary text-white',
+  dark: 'bg-primary text-white shadow-sm',
 };
 
 const BADGE_ICONS: Record<string, string> = {
