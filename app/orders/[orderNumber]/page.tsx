@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, MapPin, Phone, ChevronRight, Star, Clock, Truck, CheckCircle2, Package, ChefHat } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, ChevronRight, Star, Clock, Truck, CheckCircle2, Package, ChefHat, ExternalLink } from 'lucide-react';
 import { formatRupiah, formatDate } from '@/lib/utils';
+import { getGoogleMapsUrl, getOsmEmbedUrl } from '@/lib/address-store';
 
 interface OrderItem {
   name: string;
@@ -18,6 +19,8 @@ interface OrderData {
   deliveryMethod: string;
   paymentMethod: string;
   address: string;
+  latitude?: number | null;
+  longitude?: number | null;
   total: number;
   items: OrderItem[];
   createdAt: string;
@@ -48,9 +51,11 @@ export default function OrderStatusPage({ params }: { params: { orderNumber: str
   useEffect(() => {
     // Load from sessionStorage first
     const stored = sessionStorage.getItem(`order-${orderNumber}`);
+    let storedOrder: OrderData | null = null;
     if (stored) {
       try {
-        setOrderData(JSON.parse(stored));
+        storedOrder = JSON.parse(stored) as OrderData;
+        setOrderData(storedOrder);
       } catch {
         // ignore
       }
@@ -84,6 +89,8 @@ export default function OrderStatusPage({ params }: { params: { orderNumber: str
             deliveryMethod: data.delivery_method,
             paymentMethod: data.payment_method,
             address: data.delivery_address || '',
+            latitude: storedOrder?.latitude ?? null,
+            longitude: storedOrder?.longitude ?? null,
             total: data.total,
             items: (data.order_items || []).map((i: { menu_item_name: string; quantity: number; unit_price: number }) => ({
               name: i.menu_item_name,
@@ -133,6 +140,9 @@ export default function OrderStatusPage({ params }: { params: { orderNumber: str
 
   const currentStatusIndex = getStatusIndex(currentStatus);
   const isDelivery = orderData?.deliveryMethod === 'delivery';
+  const gpsLatitude = orderData?.latitude;
+  const gpsLongitude = orderData?.longitude;
+  const hasGpsPoint = typeof gpsLatitude === 'number' && typeof gpsLongitude === 'number';
   const estimatedTime = '25 – 35 Menit';
 
   return (
@@ -280,36 +290,58 @@ export default function OrderStatusPage({ params }: { params: { orderNumber: str
           )}
         </div>
 
-        {/* Map Placeholder */}
+        {/* Map Placeholder / Peta GPS */}
         {isDelivery && (
           <div className="bg-white rounded-2xl overflow-hidden shadow-card">
-            <div className="relative h-40 bg-gradient-to-br from-[#EBF3EE] via-[#D7E8DC] to-[#C3D7B3] flex flex-col items-center justify-center">
-              {/* Manado map SVG placeholder */}
-              <svg viewBox="0 0 320 160" className="absolute inset-0 w-full h-full opacity-30" fill="none">
-                {/* Road grid */}
-                <line x1="0" y1="80" x2="320" y2="80" stroke="#24583F" strokeWidth="2" strokeDasharray="8,4"/>
-                <line x1="160" y1="0" x2="160" y2="160" stroke="#24583F" strokeWidth="2" strokeDasharray="8,4"/>
-                <line x1="0" y1="40" x2="320" y2="40" stroke="#6F9B55" strokeWidth="1" strokeDasharray="4,6"/>
-                <line x1="0" y1="120" x2="320" y2="120" stroke="#6F9B55" strokeWidth="1" strokeDasharray="4,6"/>
-                <line x1="80" y1="0" x2="80" y2="160" stroke="#6F9B55" strokeWidth="1" strokeDasharray="4,6"/>
-                <line x1="240" y1="0" x2="240" y2="160" stroke="#6F9B55" strokeWidth="1" strokeDasharray="4,6"/>
-                {/* Blocks */}
-                <rect x="20" y="10" width="40" height="20" rx="4" fill="#24583F" opacity="0.3"/>
-                <rect x="90" y="50" width="50" height="15" rx="4" fill="#6F9B55" opacity="0.3"/>
-                <rect x="170" y="90" width="60" height="20" rx="4" fill="#24583F" opacity="0.3"/>
-                <rect x="250" y="30" width="45" height="25" rx="4" fill="#6F9B55" opacity="0.3"/>
-              </svg>
-              <div className="relative z-10 flex flex-col items-center">
-                <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-lg mb-1 animate-bounce">
-                  <MapPin size={20} className="text-white" />
-                </div>
-                <p className="text-xs font-bold text-primary bg-white/80 px-3 py-1 rounded-full shadow-sm">
-                  Tikala, Manado
-                </p>
+            {hasGpsPoint ? (
+              <div className="relative h-40">
+                <iframe
+                  title="Lokasi pengantaran"
+                  src={getOsmEmbedUrl(gpsLatitude, gpsLongitude)}
+                  className="w-full h-full border-0"
+                  loading="lazy"
+                />
+                <a
+                  href={getGoogleMapsUrl(gpsLatitude, gpsLongitude)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute bottom-2 right-2 inline-flex items-center gap-1 bg-white/95 text-primary text-[11px] font-semibold px-2.5 py-1.5 rounded-full shadow-sm hover:bg-white"
+                >
+                  Buka Google Maps
+                  <ExternalLink size={11} />
+                </a>
               </div>
-            </div>
+            ) : (
+              <div className="relative h-40 bg-gradient-to-br from-[#EBF3EE] via-[#D7E8DC] to-[#C3D7B3] flex flex-col items-center justify-center">
+                {/* Manado map SVG placeholder */}
+                <svg viewBox="0 0 320 160" className="absolute inset-0 w-full h-full opacity-30" fill="none">
+                  {/* Road grid */}
+                  <line x1="0" y1="80" x2="320" y2="80" stroke="#24583F" strokeWidth="2" strokeDasharray="8,4"/>
+                  <line x1="160" y1="0" x2="160" y2="160" stroke="#24583F" strokeWidth="2" strokeDasharray="8,4"/>
+                  <line x1="0" y1="40" x2="320" y2="40" stroke="#6F9B55" strokeWidth="1" strokeDasharray="4,6"/>
+                  <line x1="0" y1="120" x2="320" y2="120" stroke="#6F9B55" strokeWidth="1" strokeDasharray="4,6"/>
+                  <line x1="80" y1="0" x2="80" y2="160" stroke="#6F9B55" strokeWidth="1" strokeDasharray="4,6"/>
+                  <line x1="240" y1="0" x2="240" y2="160" stroke="#6F9B55" strokeWidth="1" strokeDasharray="4,6"/>
+                  {/* Blocks */}
+                  <rect x="20" y="10" width="40" height="20" rx="4" fill="#24583F" opacity="0.3"/>
+                  <rect x="90" y="50" width="50" height="15" rx="4" fill="#6F9B55" opacity="0.3"/>
+                  <rect x="170" y="90" width="60" height="20" rx="4" fill="#24583F" opacity="0.3"/>
+                  <rect x="250" y="30" width="45" height="25" rx="4" fill="#6F9B55" opacity="0.3"/>
+                </svg>
+                <div className="relative z-10 flex flex-col items-center">
+                  <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-lg mb-1 animate-bounce">
+                    <MapPin size={20} className="text-white" />
+                  </div>
+                  <p className="text-xs font-bold text-primary bg-white/80 px-3 py-1 rounded-full shadow-sm">
+                    {orderData?.address?.split(',')[0] || 'Manado'}
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="p-3">
-              <p className="text-xs text-neutral-500 font-medium">📍 Alamat Pengantaran</p>
+              <p className="text-xs text-neutral-500 font-medium">
+                📍 Alamat Pengantaran{hasGpsPoint ? ' · titik GPS presisi' : ''}
+              </p>
               <p className="text-sm font-semibold text-gray-800 mt-0.5">
                 {orderData?.address || 'Tikala, Manado – Jl. Sam Ratulangi No. 42'}
               </p>

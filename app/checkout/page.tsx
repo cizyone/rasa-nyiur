@@ -16,10 +16,16 @@ import {
   FileText,
   ChevronRight,
   Check,
+  LocateFixed,
 } from 'lucide-react';
 import { useCartStore } from '@/lib/store';
-import { useAddressStore } from '@/lib/address-store';
+import {
+  formatCoordinatesText,
+  useAddressStore,
+  type AddressCoordinates,
+} from '@/lib/address-store';
 import { formatRupiah, generateOrderNumber } from '@/lib/utils';
+import AddressModal from '@/components/ui/AddressModal';
 
 type DeliveryMethod = 'delivery' | 'pickup';
 type PaymentMethod = 'qris' | 'transfer' | 'cod';
@@ -34,17 +40,30 @@ export default function CheckoutPage() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const savedAddress = useAddressStore((s) => s.address);
+  const savedLatitude = useAddressStore((s) => s.latitude);
+  const savedLongitude = useAddressStore((s) => s.longitude);
   const setSavedAddress = useAddressStore((s) => s.setAddress);
   const [address, setAddress] = useState(savedAddress);
+  const [coords, setCoords] = useState<AddressCoordinates | null>(
+    savedLatitude !== null && savedLongitude !== null
+      ? { latitude: savedLatitude, longitude: savedLongitude }
+      : null
+  );
   const [landmark, setLandmark] = useState('');
   const [courierNotes, setCourierNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isAddressOpen, setAddressOpen] = useState(false);
 
-  // Ambil alamat tersimpan setelah store selesai hidrasi dari localStorage.
+  // Ambil alamat & titik GPS tersimpan setelah store selesai hidrasi dari localStorage.
   useEffect(() => {
     setAddress(savedAddress);
-  }, [savedAddress]);
+    setCoords(
+      savedLatitude !== null && savedLongitude !== null
+        ? { latitude: savedLatitude, longitude: savedLongitude }
+        : null
+    );
+  }, [savedAddress, savedLatitude, savedLongitude]);
 
   const subtotal = getSubtotal();
   const deliveryFee = getDeliveryFee();
@@ -66,10 +85,14 @@ export default function CheckoutPage() {
     setLoading(true);
     setError('');
 
-    // Simpan alamat agar otomatis terpakai pada pesanan berikutnya.
+    // Simpan alamat & titik GPS agar otomatis terpakai pada pesanan berikutnya.
     if (deliveryMethod === 'delivery') {
-      setSavedAddress(address);
+      setSavedAddress(address, coords);
     }
+
+    const coordinateText = coords
+      ? ` (${formatCoordinatesText(coords.latitude, coords.longitude)})`
+      : '';
 
     const orderNumber = generateOrderNumber();
 
@@ -88,7 +111,7 @@ export default function CheckoutPage() {
             order_number: orderNumber,
             customer_name: name,
             customer_phone: phone,
-            delivery_address: deliveryMethod === 'delivery' ? `${address}${landmark ? ` (Patokan: ${landmark})` : ''}` : 'Ambil Sendiri',
+            delivery_address: deliveryMethod === 'delivery' ? `${address}${landmark ? ` (Patokan: ${landmark})` : ''}${coordinateText}` : 'Ambil Sendiri',
             delivery_method: deliveryMethod,
             payment_method: paymentMethod,
             promo_code: promoCode || null,
@@ -131,6 +154,8 @@ export default function CheckoutPage() {
           deliveryMethod,
           paymentMethod,
           address: deliveryMethod === 'delivery' ? address : 'Ambil Sendiri',
+          latitude: deliveryMethod === 'delivery' ? coords?.latitude ?? null : null,
+          longitude: deliveryMethod === 'delivery' ? coords?.longitude ?? null : null,
           total,
           subtotal,
           deliveryFee,
@@ -165,6 +190,8 @@ export default function CheckoutPage() {
           deliveryMethod,
           paymentMethod,
           address: deliveryMethod === 'delivery' ? address : 'Ambil Sendiri',
+          latitude: deliveryMethod === 'delivery' ? coords?.latitude ?? null : null,
+          longitude: deliveryMethod === 'delivery' ? coords?.longitude ?? null : null,
           total,
           items: items.map((i) => ({ name: i.name, quantity: i.quantity, unitPrice: i.unitPrice })),
           createdAt: new Date().toISOString(),
@@ -275,11 +302,28 @@ export default function CheckoutPage() {
                   <textarea
                     placeholder="Alamat Lengkap di Manado"
                     value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    onChange={(e) => {
+                      setAddress(e.target.value);
+                      // Alamat diketik manual tidak lagi terikat ke titik GPS sebelumnya.
+                      setCoords(null);
+                    }}
                     rows={2}
                     className="input-field pl-10 resize-none"
                     required
                   />
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] text-gray-400">
+                    {coords ? '📍 Titik GPS presisi tersimpan' : 'Tips: pakai GPS untuk lokasi lebih presisi.'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setAddressOpen(true)}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline shrink-0"
+                  >
+                    <LocateFixed size={12} />
+                    GPS / Ubah
+                  </button>
                 </div>
                 <div className="relative">
                   <FileText size={16} className="absolute left-3.5 top-3.5 text-neutral-400" />
@@ -423,6 +467,8 @@ export default function CheckoutPage() {
           </button>
         </div>
       </form>
+
+      <AddressModal open={isAddressOpen} onClose={() => setAddressOpen(false)} />
     </div>
   );
 }

@@ -48,6 +48,7 @@ export default function CartPage() {
   const [isAddressOpen, setAddressOpen] = useState(false);
 
   const savedAddress = useAddressStore((s) => s.address);
+  const hasGpsPoint = useAddressStore((s) => s.latitude !== null && s.longitude !== null);
 
   const subtotal = getSubtotal();
   const deliveryFee = getDeliveryFee();
@@ -112,7 +113,9 @@ export default function CartPage() {
               <p className="text-sm font-semibold text-gray-800 leading-snug whitespace-pre-line">
                 {savedAddress}
               </p>
-              <p className="text-xs text-gray-500 mt-0.5">Alamat pengantaran</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {hasGpsPoint ? '📍 Titik GPS presisi tersimpan' : 'Alamat pengantaran'}
+              </p>
             </div>
             <button
               type="button"
