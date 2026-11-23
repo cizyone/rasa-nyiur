@@ -35,22 +35,31 @@ export async function updateSession(request: NextRequest) {
     cookies: cookieMethods,
   });
 
+  // getSession() membaca dari cookie — lebih reliable di Edge Runtime.
+  // getUser() melakukan network call ke Supabase dan bisa gagal/lambat.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  // Protected routes — only enforce when Supabase is configured
-  const protectedPaths = ['/profile', '/orders', '/checkout', '/cart'];
-  const authPaths = ['/login', '/register'];
+  const isLoggedIn = !!session;
   const pathname = request.nextUrl.pathname;
 
-  if (!user && protectedPaths.some((path) => pathname.startsWith(path))) {
+  // Rute yang WAJIB login (hanya checkout dan profile)
+  // Cart & orders bisa diakses publik (data dari local state)
+  const protectedPaths = ['/checkout', '/profile'];
+
+  // Rute yang redirect ke home kalau sudah login
+  const authOnlyPaths = ['/login', '/register'];
+
+  if (!isLoggedIn && protectedPaths.some((path) => pathname.startsWith(path))) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
+    // Simpan tujuan awal supaya bisa redirect balik setelah login
+    url.searchParams.set('next', pathname);
     return NextResponse.redirect(url);
   }
 
-  if (user && authPaths.some((path) => pathname.startsWith(path))) {
+  if (isLoggedIn && authOnlyPaths.some((path) => pathname.startsWith(path))) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
     return NextResponse.redirect(url);

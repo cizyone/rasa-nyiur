@@ -161,7 +161,7 @@ export default function HomePage() {
       {/* Greeting & Search */}
       <div className="px-4 pt-2 pb-3 bg-white">
         <h1 className="text-xl font-extrabold text-gray-900 mb-3">
-          Halo, Foodies! 👋
+          Halo, Nudist! 👋
         </h1>
         <div className="relative">
           <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />

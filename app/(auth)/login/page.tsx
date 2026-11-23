@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get('next') || '/';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -22,7 +24,8 @@ export default function LoginPage() {
       const supabase = createClient();
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) throw authError;
-      router.push('/');
+      router.push(nextPath);
+      router.refresh();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Login gagal';
       setError(
@@ -62,7 +65,9 @@ export default function LoginPage() {
         {/* Card */}
         <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-1">Masuk ke Akun</h2>
-          <p className="text-sm text-neutral-500 mb-6">Selamat datang kembali, Foodies! 👋</p>
+          <p className="text-sm text-neutral-500 mb-6">
+            {nextPath !== '/' ? 'Login dulu untuk melanjutkan pesananmu 🛒' : 'Selamat datang kembali, Foodies! 👋'}
+          </p>
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl p-3 mb-4 flex items-start gap-2">
@@ -131,5 +136,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gradient-to-br from-[#EBF3EE] via-[#F5F6F5] to-[#FEF8EC] flex items-center justify-center"><div className="text-5xl animate-pulse">🌴</div></div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
